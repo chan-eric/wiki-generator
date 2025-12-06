@@ -4,7 +4,7 @@ import json
 from typing import Dict, Any
 
 class LLMManager:
-    def __init__(self, model_name: str = "", base_url: str = "http://localhost:11435"):
+    def __init__(self, model_name: str = "", base_url: str = "http://localhost:11434"):
         self.base_url = base_url
         self.model_name = model_name
     
@@ -16,17 +16,12 @@ class LLMManager:
         try:
             response = requests.post(
                 f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model_name,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.1,
-                        "top_p": 0.9,
-                        "num_predict": 4000
-                    }
-                },
-                timeout=1
+                json={"model": "qwen3:4b",
+                      "prompt": prompt,
+                      "stream":False,
+                      "max-tokens":400,
+                      "temperature":0.1
+                }
             )
             
             if response.status_code == 200:

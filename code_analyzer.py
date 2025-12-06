@@ -8,9 +8,7 @@ from typing import Dict, List, Any
 class CodeAnalyzer:
     def __init__(self):
         self.supported_extensions = {
-            '.py': 'python',
-            '.js': 'javascript', 
-            '.ts': 'typescript',
+
             '.java': 'java',
             '.cpp': 'cpp',
             '.c': 'c',

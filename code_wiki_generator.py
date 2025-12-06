@@ -57,14 +57,6 @@ class SimpleCodeWikiGenerator:
 *Total files: {len(analysis['files'])}*
 
 {documentation}
-
-## File Structure
-
-{self._generate_file_tree(analysis)}
-
-## Detailed File Analysis
-
-{self._generate_detailed_analysis(analysis)}
 """
         
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -107,7 +99,7 @@ class SimpleCodeWikiGenerator:
 
 def main():
 
-    llm_model = "starcode:latest"
+    llm_model = "NT-java:latest"
     
     parser = argparse.ArgumentParser(description='Generate wiki documentation from codebase')
     parser.add_argument('folder', help='Path to code folder')

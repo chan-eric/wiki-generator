@@ -11,7 +11,7 @@ class LLMManager:
     def generate_documentation(self, code_context: Dict) -> str:
         """Generate documentation using local LLM"""
 
-        edited_wiki_file = "prev_outputxxx.md"
+        edited_wiki_file = "prev_output.md"
 
         # Read the manually edited wiki
         try:
@@ -33,8 +33,8 @@ class LLMManager:
                 json={"model": "qwen2.5-coder:7b",
                       "prompt": prompt,
                       "stream":False,
-                      "max-tokens":10000,
-                      "temperature":0.3
+                      "max-tokens":1000,
+                      "temperature":0.1
                 }
             )
             
@@ -54,17 +54,15 @@ class LLMManager:
         
         prompt = f"""You are a senior software engineer doing  codebase analysis, your task is to create comprehensive document:
 
-1. Find every comment that starts with `// #LLM_READ` followed by a number (like `// #LLM_READ 1`), there should be 12 of them, so please find all 12.
+1. Find every comment that starts with `// #LLM_ATTENTION` followed by a number (like `// #LLM_ATTENTION 1`).
 2. For each such comment, record:
-   a. The number after `#LLM_READ`.
+   a. The number after `#LLM_ATTENTION`, if there is no number, make assumption
    b. The name of the class and method (function) that contains this comment.
-   c. Try to interpret what the code does reading the next 5 lines
+   c. Try to interpret what the code before or after // #LLM_ATTENTION to figure out what it does approximately
 
 3. Sort the recorded items by the number (ascending).
 
-4. Output the results in two ways:
-   - First, as a Markdown list, with each item in the format: `#LLM_READ <number>: In class <ClassName>, method <MethodName>: and the three lines of code`.
-   - Then, as a Markdown table with columns: "Number", "Class", "Method", "What it does".
+4. Output in Markdown , with each item in the format: `#LLM_READ <number>: In class <ClassName>, method <MethodName>: and the three lines of code`.
 
 Here is the codebase summary:
 {code_summary}
@@ -80,24 +78,17 @@ Here is the codebase summary:
 
             code_summary = self._create_code_summary(code_context)
 
-            prompt = f"""You are a senior software engineer tasked with improving existing documentation in Markdown format.
-            Please ignore panama and Costa rica, avoid those in the document, use Alberta address as example, because only that can pass Servus check, here we focus on Servus in which it only responsible for province Alberta Canada
-            use the // trace comment that I put in the code for path
+            prompt = f"""You are a senior software engineer tasked with improving existing documentation in point forms.
+            use this sequence as a base
 
     You have been given:
     1. A codebase analysis {code_summary}
-    2. The Java functions call sequence denoted by #LLM_READ 1,2,3... 12 {existing_doc}
-
-    CODEBASE SUMMARY:
-    {code_summary}
-
-    Your task: IMPROVE and REFINE this documentation.
+    2. try to generate run squence based off {existing_doc}
 
     Please:
-    1. Explain what this code trace sequence 1-12 is doing, PLease use the trace I had with comments, otherwise this sequence will fail
+    1. Explain what this code trace sequence
     2. Add missing technical details from the code analysis
     3. Improve organization and clarity
-    4. Make this into a table, with Function Name, Purpose, Trace Context (Debug) 
     
     
 

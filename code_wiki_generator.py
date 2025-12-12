@@ -22,6 +22,10 @@ class SimpleCodeWikiGenerator:
         
         # Analyze codebase
         analysis = self.analyzer.analyze_directory(code_folder)
+
+        if not analysis['files']:
+            print("❌ No code files found in the specified folder!")
+            return None
         
         # Calculate total functions from all files
         total_functions = sum(len(file.get('functions', [])) for file in analysis['files'])

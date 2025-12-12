@@ -4,23 +4,37 @@ import json
 from typing import Dict, Any
 
 class LLMManager:
-    def __init__(self, model_name: str = "", base_url: str = "http://localhost:11434"):
+    def __init__(self, model_name: str = "", base_url: str = "http://10.0.0.162:11434"):
         self.base_url = base_url
         self.model_name = model_name
     
     def generate_documentation(self, code_context: Dict) -> str:
         """Generate documentation using local LLM"""
-        
-        prompt = self._build_prompt(code_context)
+
+        edited_wiki_file = "prev_outputxxx.md"
+
+        # Read the manually edited wiki
+        try:
+            with open(edited_wiki_file, 'r', encoding='utf-8') as f:
+                existing_context = f.read()
+                if not existing_context:
+                    prompt = self._build_prompt(code_context)
+                else:
+                    prompt = self._build_refinement_prompt(code_context, existing_context)
+        except (FileNotFoundError, OSError):
+            # File doesn't exist or can't be read
+            prompt = self._build_prompt(code_context)
+
+
         
         try:
             response = requests.post(
                 f"{self.base_url}/api/generate",
-                json={"model": "qwen3:4b",
+                json={"model": "qwen2.5-coder:7b",
                       "prompt": prompt,
                       "stream":False,
-                      "max-tokens":400,
-                      "temperature":0.1
+                      "max-tokens":10000,
+                      "temperature":0.3
                 }
             )
             
@@ -38,27 +52,60 @@ class LLMManager:
         # Create a summary of the codebase for the prompt
         code_summary = self._create_code_summary(code_context)
         
-        prompt = f"""You are a senior software engineer creating comprehensive documentation for a codebase.
+        prompt = f"""You are a senior software engineer doing  codebase analysis, your task is to create comprehensive document:
 
-CODEBASE SUMMARY:
+1. Find every comment that starts with `// #LLM_READ` followed by a number (like `// #LLM_READ 1`), there should be 12 of them, so please find all 12.
+2. For each such comment, record:
+   a. The number after `#LLM_READ`.
+   b. The name of the class and method (function) that contains this comment.
+   c. Try to interpret what the code does reading the next 5 lines
+
+3. Sort the recorded items by the number (ascending).
+
+4. Output the results in two ways:
+   - First, as a Markdown list, with each item in the format: `#LLM_READ <number>: In class <ClassName>, method <MethodName>: and the three lines of code`.
+   - Then, as a Markdown table with columns: "Number", "Class", "Method", "What it does".
+
+Here is the codebase summary:
 {code_summary}
 
-Please generate detailed technical documentation in Markdown format that includes:
 
-1. **Project Overview**: High-level description of what this codebase does
-2. **Architecture**: Main components and how they interact
-3. **Key Functions**: Important functions and their purposes
-4. **Usage**: How to use the main components
-5. **Dependencies**: Key libraries and frameworks used
-6. **Setup**: Basic setup instructions if apparent from the code
 
-Be technical and specific. Reference actual file names, function names, and classes from the codebase.
-
-Format your response as clean Markdown with appropriate headers and code examples where relevant.
 """
         
         return prompt
+
+    def _build_refinement_prompt(self, code_context: Dict, existing_doc: str) -> str:
+            """Build prompt for refining existing documentation"""
+
+            code_summary = self._create_code_summary(code_context)
+
+            prompt = f"""You are a senior software engineer tasked with improving existing documentation in Markdown format.
+            Please ignore panama and Costa rica, avoid those in the document, use Alberta address as example, because only that can pass Servus check, here we focus on Servus in which it only responsible for province Alberta Canada
+            use the // trace comment that I put in the code for path
+
+    You have been given:
+    1. A codebase analysis {code_summary}
+    2. The Java functions call sequence denoted by #LLM_READ 1,2,3... 12 {existing_doc}
+
+    CODEBASE SUMMARY:
+    {code_summary}
+
+    Your task: IMPROVE and REFINE this documentation.
+
+    Please:
+    1. Explain what this code trace sequence 1-12 is doing, PLease use the trace I had with comments, otherwise this sequence will fail
+    2. Add missing technical details from the code analysis
+    3. Improve organization and clarity
+    4. Make this into a table, with Function Name, Purpose, Trace Context (Debug) 
     
+    
+
+    Return the improved documentation in Markdown format.
+    """
+
+            return prompt
+
     def _create_code_summary(self, code_context: Dict) -> str:
         """Create a concise summary of the codebase for the prompt"""
         
